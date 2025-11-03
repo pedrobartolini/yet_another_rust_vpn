@@ -1,0 +1,43 @@
+max_width = 200
+hard_tabs = false
+tab_spaces = 2
+newline_style = "Unix"
+indent_style = "Block"
+use_small_heuristics = "Max"
+
+
+# Struct field alignment
+struct_field_align_threshold = 999
+enum_discrim_align_threshold = 999
+struct_lit_single_line = true
+
+space_after_colon = true
+space_before_colon = false
+
+
+# Imports
+imports_indent = "Visual"
+imports_layout = "HorizontalVertical"
+imports_granularity = "Item"
+group_imports = "StdExternalCrate"
+reorder_imports = true
+reorder_modules = true
+
+# Compact style
+empty_item_single_line = true
+fn_single_line = false
+where_single_line = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+format_strings = true
+match_arm_blocks = false
+match_arm_leading_pipes = "Never"
+match_block_trailing_comma = false
+trailing_semicolon = false
+trailing_comma = "Never"
+merge_derives = true
+overflow_delimited_expr = true
+binop_separator = "Front"
+remove_nested_parens = true
+error_on_unformatted = false
+style_edition = "2024"
