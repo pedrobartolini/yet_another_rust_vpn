@@ -14,11 +14,7 @@ debug = 0
 [workspace.dependencies]
 tokio = { version = "*", features = ["full"] }
 anyhow = { version = "*" }
-
-
 smoltcp = { version = "*" }
-bytes = { version = "*" }
 tun-rs = { version = "*", features = ["async"] }
-
 shared = { path = "shared" }
 

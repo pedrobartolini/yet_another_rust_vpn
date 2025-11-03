@@ -118,7 +118,7 @@ name = "client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bytes",
+ "shared",
  "smoltcp",
  "tokio",
  "tun-rs",
@@ -697,7 +697,6 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bytes",
  "shared",
  "smoltcp",
  "tokio",
