@@ -32,7 +32,6 @@ impl VpnState {
       Some(client) => {
         client.sockaddr = sockaddr;
         client.last_read = now;
-        is_new_client = true;
       }
       None => {
         let Some(virtual_ipv4) = self.ipv4_pool.allocate() else {
@@ -47,6 +46,8 @@ impl VpnState {
         self.clients.insert(*client_id, vpn_client::VpnClient::new(sockaddr, virtual_ipv4, virtual_ipv6, now));
         self.ip_indexer.insert(IpAddr::V4(virtual_ipv4), *client_id);
         self.ip_indexer.insert(IpAddr::V6(virtual_ipv6), *client_id);
+
+        is_new_client = true;
       }
     }
 
