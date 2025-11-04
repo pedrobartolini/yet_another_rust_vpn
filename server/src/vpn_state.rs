@@ -19,7 +19,7 @@ pub struct VpnState {
 }
 
 impl VpnState {
-  pub fn new(ipv6_pool: shared::IPv6Pool, ipv4_pool: shared::IPv4Pool) -> Self {
+  pub fn new(ipv4_pool: shared::IPv4Pool, ipv6_pool: shared::IPv6Pool) -> Self {
     Self { clients: Default::default(), ip_indexer: Default::default(), next_timeout: Default::default(), ipv4_pool, ipv6_pool }
   }
 

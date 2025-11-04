@@ -5,18 +5,15 @@ use tokio::net::UdpSocket;
 
 use super::*;
 
-const PACKET_TYPE_FORWARD: u8 = 1;
-const PACKET_TYPE_VIRTUAL_ADDRESSES: u8 = 2;
-
-pub async fn run_vpn_service(udp_socket: UdpSocket, mut udp_state: vpn_state::VpnState, tun_device: tun_rs::AsyncDevice) -> anyhow::Result<()> {
+pub async fn run_vpn_service(udp_socket: UdpSocket, mut vpn_state: vpn_state::VpnState, tun_device: tun_rs::AsyncDevice) -> anyhow::Result<()> {
   let mut udp_buffer = [0u8; 4096];
   let mut tun_buffer = [0u8; 4096 + 1]; // 1 byte extra for packet type prefix
 
   loop {
     tokio::select! {
-      client_id = udp_state.next_timeout() => udp_state.remove_client(&client_id),
-      udp_read = udp_socket.recv_from(&mut udp_buffer) => handle_udp_read(udp_read,  &mut udp_buffer, &mut udp_state, &udp_socket, &tun_device).await?,
-      tun_read = tun_device.recv(&mut tun_buffer) => handle_tun_read(tun_read, &mut tun_buffer[1..], &mut udp_state, &udp_socket).await?,
+      client_id = vpn_state.next_timeout() => vpn_state.remove_client(&client_id),
+      udp_read = udp_socket.recv_from(&mut udp_buffer) => handle_udp_read(udp_read,  &mut udp_buffer, &mut vpn_state, &udp_socket, &tun_device).await?,
+      tun_read = tun_device.recv(&mut tun_buffer) => handle_tun_read(tun_read, &mut tun_buffer[1..], &mut vpn_state, &udp_socket).await?,
     };
   }
 }
@@ -60,7 +57,7 @@ async fn handle_udp_read(
   if is_new_client {
     let mut out_buffer = [0u8; 1 + 4 + 16];
 
-    out_buffer[0] = PACKET_TYPE_VIRTUAL_ADDRESSES;
+    out_buffer[0] = shared::PACKET_TYPE_VIRTUAL_ADDRESSES;
 
     // Write IPv4 (4 bytes)
     out_buffer[1..5].copy_from_slice(&udp_state.get_client_virtual_ipv4(&client_id).unwrap().octets());
@@ -90,7 +87,7 @@ async fn handle_tun_read(tun_read: tokio::io::Result<usize>, tun_buffer: &mut [u
   let Some(virtual_ip) = virtual_ip else { return Ok(()) };
   let Some(sockaddr) = udp_state.get_sockaddr(&virtual_ip) else { return Ok(()) };
 
-  tun_buffer[0] = PACKET_TYPE_FORWARD; // Type: packet
+  tun_buffer[0] = shared::PACKET_TYPE_FORWARD; // Type: packet
 
   udp_socket.send_to(&tun_buffer[..n + 1], sockaddr).await.map_err(|err| anyhow::anyhow!("failed to send tun packet: {err:?}"))?;
 
