@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
   // // Set up routes for the VPN subnet
   // setup_routes()?;
 
-  vpn_service::run_vpn_service(udp_socket, vpn_state, tun_device).await?;
+  vpn_service::run_vpn_service(vpn_state, udp_socket, tun_device).await?;
 
   Ok(())
 }
