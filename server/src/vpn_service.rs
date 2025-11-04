@@ -13,7 +13,7 @@ pub async fn run_vpn_service(udp_socket: UdpSocket, mut vpn_state: vpn_state::Vp
     tokio::select! {
       client_id = vpn_state.next_timeout() => vpn_state.remove_client(&client_id),
       udp_read = udp_socket.recv_from(&mut udp_buffer) => handle_udp_read(udp_read,  &mut udp_buffer, &mut vpn_state, &udp_socket, &tun_device).await?,
-      tun_read = tun_device.recv(&mut tun_buffer) => handle_tun_read(tun_read, &mut tun_buffer[1..], &mut vpn_state, &udp_socket).await?,
+      tun_read = tun_device.recv(&mut tun_buffer[1..]) => handle_tun_read(tun_read, &mut tun_buffer, &mut vpn_state, &udp_socket).await?,
     };
   }
 }
@@ -32,27 +32,12 @@ async fn handle_udp_read(
   }
 
   // min valid datagram
-  if n < 5 {
+  if n < 4 {
     return Ok(());
   }
 
   let client_id = shared::UdpId::from([udp_buffer[0], udp_buffer[1], udp_buffer[2], udp_buffer[3]]);
   let is_new_client = udp_state.add_client(&client_id, sockaddr)?;
-
-  match udp_buffer[4] >> 4 {
-    4 => {
-      let Ok(mut ipv4_packet) = smoltcp::wire::Ipv4Packet::new_checked(&mut udp_buffer[4..]) else { return Ok(()) };
-      ipv4_packet.set_src_addr(*udp_state.get_client_virtual_ipv4(&client_id).unwrap());
-      ipv4_packet.fill_checksum();
-    }
-    6 => {
-      let Ok(mut ipv6_packet) = smoltcp::wire::Ipv6Packet::new_checked(&mut udp_buffer[4..]) else { return Ok(()) };
-      ipv6_packet.set_src_addr(*udp_state.get_client_virtual_ipv6(&client_id).unwrap());
-    }
-    _ => return Ok(())
-  }
-
-  tun_device.send(&udp_buffer[4..n]).await.map_err(|err| anyhow::anyhow!("failed to send udp datagram: {err:?}"))?;
 
   if is_new_client {
     let mut out_buffer = [0u8; 1 + 4 + 16];
@@ -68,6 +53,25 @@ async fn handle_udp_read(
     udp_socket.send_to(&out_buffer, sockaddr).await.map_err(|err| anyhow::anyhow!("failed to send tun packet: {err:?}"))?;
   }
 
+  if n < 24 {
+    return Ok(())
+  }
+
+  match udp_buffer[4] >> 4 {
+    4 => {
+      let mut ipv4_packet = smoltcp::wire::Ipv4Packet::new_checked(&mut udp_buffer[4..]).map_err(|err| anyhow::anyhow!("failed to parse ipv4 packet {err:?}"))?;
+      ipv4_packet.set_src_addr(*udp_state.get_client_virtual_ipv4(&client_id).unwrap());
+      ipv4_packet.fill_checksum();
+    }
+    6 => {
+      let mut ipv6_packet = smoltcp::wire::Ipv6Packet::new_checked(&mut udp_buffer[4..]).map_err(|err| anyhow::anyhow!("failed to parse ipv6 packet {err:?}"))?;
+      ipv6_packet.set_src_addr(*udp_state.get_client_virtual_ipv6(&client_id).unwrap());
+    }
+    _ => return Ok(())
+  }
+
+  tun_device.send(&udp_buffer[4..n + 4]).await.map_err(|err| anyhow::anyhow!("failed to send udp datagram: {err:?}"))?;
+
   Ok(())
 }
 
@@ -78,9 +82,11 @@ async fn handle_tun_read(tun_read: tokio::io::Result<usize>, tun_buffer: &mut [u
     return Err(anyhow::anyhow!("failed to recv tun packet: EOF"))
   }
 
-  let virtual_ip = match tun_buffer[1] >> 4 {
-    4 => smoltcp::wire::Ipv4Packet::new_checked(&tun_buffer).ok().map(|packet| IpAddr::V4(packet.dst_addr())),
-    6 => smoltcp::wire::Ipv6Packet::new_checked(&tun_buffer).ok().map(|packet| IpAddr::V6(packet.dst_addr())),
+  let ip_version = tun_buffer[1] >> 4;
+
+  let virtual_ip = match ip_version {
+    4 => smoltcp::wire::Ipv4Packet::new_checked(&tun_buffer[1..]).ok().map(|packet| IpAddr::V4(packet.dst_addr())),
+    6 => smoltcp::wire::Ipv6Packet::new_checked(&tun_buffer[1..]).ok().map(|packet| IpAddr::V6(packet.dst_addr())),
     _ => return Ok(())
   };
 
