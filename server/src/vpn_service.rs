@@ -119,7 +119,7 @@ async fn handle_tun_loop(vpn_state: Arc<RwLock<vpn_state::VpnState>>, udp_socket
 
   loop {
     let tun_read = tun_device.recv(&mut tun_buffer[1..]).await.map_err(|err| anyhow::anyhow!("failed to recv tun packet: {err:?}"))?;
-    handle_tun_read(tun_read, &mut tun_buffer[1..], &vpn_state, &udp_socket).await?;
+    handle_tun_read(tun_read, &mut tun_buffer, &vpn_state, &udp_socket).await?;
   }
 }
 
