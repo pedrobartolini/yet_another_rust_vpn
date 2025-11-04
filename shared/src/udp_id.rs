@@ -26,6 +26,11 @@ impl UdpId {
   pub fn as_u32(&self) -> u32 {
     u32::from_le_bytes(self.0)
   }
+
+  #[inline]
+  pub fn as_bytes(&self) -> &[u8] {
+    &self.0
+  }
 }
 
 // --- Custom Hasher for integer keys ---
