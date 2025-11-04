@@ -9,8 +9,6 @@ use tokio::time::Instant;
 
 use super::*;
 
-const CLIENT_TIMEOUT_DURATION: Duration = Duration::from_secs(30);
-
 pub struct VpnState {
   clients:      HashMap<shared::UdpId, vpn_client::VpnClient>,
   ip_indexer:   HashMap<IpAddr, shared::UdpId>,
@@ -91,14 +89,20 @@ impl VpnState {
     Some(client.sockaddr)
   }
 
-  // pub fn next_timeout(&self) -> Option<Instant> {
-  //   let instant = self.next_timeout.map(|(_, instant)| instant);
+  pub fn next_timeout(&self) -> impl Future<Output = shared::UdpId> {
+    let next_timeout = self.next_timeout.clone();
 
-  //   instant + CLIENT_TIMEOUT_DURATION
-  // }
+    const CLIENT_TIMEOUT_DURATION: Duration = Duration::from_secs(30);
 
-  pub fn get_timeout(&self) -> Option<shared::UdpId> {
-    self.next_timeout.filter(|(_, instant)| *instant + CLIENT_TIMEOUT_DURATION <= tokio::time::Instant::now()).map(|(client_id, _)| client_id)
+    async move {
+      match next_timeout {
+        Some((next_timeout_client_id, next_timeout_instant)) => {
+          tokio::time::sleep_until(next_timeout_instant + CLIENT_TIMEOUT_DURATION).await;
+          return next_timeout_client_id
+        }
+        None => std::future::pending().await
+      }
+    }
   }
 
   fn recalculate_next_timeout(&mut self) {

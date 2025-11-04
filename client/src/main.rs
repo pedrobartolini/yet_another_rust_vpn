@@ -59,7 +59,12 @@ async fn handle_udp_read(udp_read: tokio::io::Result<usize>, udp_buffer: &mut [u
       // Drop the old device first if it exists
       *tun_device = None;
 
-      let device = tun_rs::DeviceBuilder::new().name("tun0").ipv4(virtual_ipv4, shared::BASE_IPV4_MASK, None).ipv6(virtual_ipv6, shared::BASE_IPV6_PREFIX).mtu(shared::MTU).build_async()?;
+      let device = tun_rs::DeviceBuilder::new()
+        .name("tun0")
+        .ipv4(virtual_ipv4, shared::BASE_IPV4_MASK, Some(Ipv4Addr::new(virtual_ipv4.octets()[0], virtual_ipv4.octets()[1], virtual_ipv4.octets()[2], 1)))
+        .ipv6(virtual_ipv6, shared::BASE_IPV6_PREFIX)
+        .mtu(shared::MTU)
+        .build_async()?;
 
       route_setup::setup_route("tun0")?;
 
