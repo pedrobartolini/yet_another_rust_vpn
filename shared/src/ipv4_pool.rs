@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 use std::net::Ipv4Addr;
 
+pub const BASE_IPV4: Ipv4Addr = Ipv4Addr::new(10, 0, 1, 0);
+pub const BASE_IPV4_MASK: u8 = 24;
+
 pub struct IPv4Pool {
   base:      Ipv4Addr,
   mask:      u8,

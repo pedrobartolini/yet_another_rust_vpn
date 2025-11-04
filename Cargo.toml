@@ -12,9 +12,15 @@ opt-level = 0
 debug = 0
 
 [workspace.dependencies]
+shared = { path = "shared" }
+
 tokio = { version = "*", features = ["full"] }
 anyhow = { version = "*" }
 smoltcp = { version = "*" }
 tun-rs = { version = "*", features = ["async"] }
-shared = { path = "shared" }
+rand = { version = "*" }
+
+dotenv = { version = "*" }
+envy =  { version = "*" }
+serde = { version = "*", features = ["derive"] }
 

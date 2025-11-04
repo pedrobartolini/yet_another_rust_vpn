@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 use std::net::Ipv6Addr;
 
+pub const BASE_IPV6: Ipv6Addr = Ipv6Addr::new(0xfd00, 0, 0, 1, 0, 0, 0, 0);
+pub const BASE_IPV6_PREFIX: u8 = 64;
+
 pub struct IPv6Pool {
   base:      Ipv6Addr,
   prefix:    u8,
