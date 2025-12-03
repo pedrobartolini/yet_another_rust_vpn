@@ -6,6 +6,5 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 shared = { workspace = true }
-smoltcp = { workspace = true }
 tokio = { workspace = true }
 tun-rs = { workspace = true }

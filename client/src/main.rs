@@ -69,7 +69,8 @@ async fn handle_udp_read(udp_read: tokio::io::Result<usize>, udp_buffer: &mut [u
 
       setup::setup_route("tun0")?;
 
-      println!("assigned tun device");
+      println!("Conexão VPN estabelecida com sucesso!");
+      println!("Por favor, mantenha esta janela aberta enquanto utiliza a VPN.");
 
       *tun_device = Some(device);
     }
