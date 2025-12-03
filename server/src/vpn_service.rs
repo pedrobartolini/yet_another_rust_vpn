@@ -81,6 +81,7 @@ async fn handle_udp_read(
   }
 
   tun_device.send(&udp_buffer[UDP_ID_TOTAL_LEN..n + UDP_ID_TOTAL_LEN]).await.map_err(|err| anyhow::anyhow!("failed to send udp datagram: {err:?}"))?;
+  println!("TUNWRITE");
 
   Ok(())
 }
@@ -100,8 +101,12 @@ async fn handle_tun_read(tun_read: tokio::io::Result<usize>, tun_buffer: &mut [u
     _ => return Ok(())
   };
 
+  println!("TUNREAD");
+
   let Some(virtual_ip) = virtual_ip else { return Ok(()) };
   let Some(sockaddr) = udp_state.get_sockaddr(&virtual_ip) else { return Ok(()) };
+
+  println!("TUNREAD OKOK");
 
   tun_buffer[0] = shared::PACKET_TYPE_FORWARD; // Type: packet
 

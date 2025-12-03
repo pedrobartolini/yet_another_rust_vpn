@@ -1,26 +1,14 @@
 [workspace]
-resolver = "3"
+resolver = "2"
 members = ["client", "server", "shared"]
 
-[profile.dev]
-incremental = true
-opt-level = 0
-debug = 0
-
-[profile.dev.package."*"]
-opt-level = 0
-debug = 0
-
 [workspace.dependencies]
-shared = { path = "shared" }
-
-tokio = { version = "*", features = ["full"] }
 anyhow = { version = "*" }
-smoltcp = { version = "*" }
-tun-rs = { version = "*", features = ["async"] }
-rand = { version = "*" }
-
 dotenv = { version = "*" }
-envy =  { version = "*" }
+envy = { version = "*" }
+rand = { version = "*" }
 serde = { version = "*", features = ["derive"] }
-
+shared = { path = "shared" }
+smoltcp = { version = "*" }
+tokio = { version = "*", features = ["full"] }
+tun-rs = { version = "*", features = ["async"] }

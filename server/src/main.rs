@@ -18,46 +18,33 @@ async fn main() -> anyhow::Result<()> {
 
   let udp_socket = UdpSocket::bind(("0.0.0.0", config.server_port)).await?;
 
-  let tun_device = tun_rs::DeviceBuilder::new().ipv4(tun_virtual_ipv4, shared::BASE_IPV4_MASK, None).ipv6(tun_virtual_ipv6, shared::BASE_IPV6_PREFIX).mtu(shared::MTU).build_async()?;
+  let tun_device = tun_rs::DeviceBuilder::new().name("tun0").ipv4(tun_virtual_ipv4, shared::BASE_IPV4_MASK, None).ipv6(tun_virtual_ipv6, shared::BASE_IPV6_PREFIX).mtu(shared::MTU).build_async()?;
 
-  // // Set up routes for the VPN subnet
-  // setup_routes()?;
+  // Set up routes for the VPN subnet
+  setup_routes()?;
 
   vpn_service::run_vpn_service(vpn_state, udp_socket, tun_device).await?;
 
   Ok(())
 }
 
-// fn setup_routes() -> anyhow::Result<()> {
-//   // Calculate the network address for the IPv4 subnet
-//   let ipv4_network = format!("{}/{}", shared::BASE_IPV4, shared::BASE_IPV4_MASK);
-//   let ipv6_network = format!("{}/{}", shared::BASE_IPV6, shared::BASE_IPV6_PREFIX);
+use std::process::Command;
 
-//   // Add IPv4 route (ignore error if already exists)
-//   let output = Command::new("ip").args(&["route", "add", &ipv4_network, "dev", "tun0"]).output()?;
+fn setup_routes() -> anyhow::Result<()> {
+  // Enable IP forwarding
+  Command::new("sysctl").args(["-w", "net.ipv4. ip_forward=1"]).status()?;
 
-//   if !output.status.success() {
-//     let stderr = String::from_utf8_lossy(&output.stderr);
-//     if !stderr.contains("File exists") {
-//       return Err(anyhow::anyhow!("Failed to add IPv4 route: {}", stderr));
-//     }
-//     println!("IPv4 route already exists");
-//   } else {
-//     println!("IPv4 route added: {} via tun0", ipv4_network);
-//   }
+  Command::new("sysctl").args(["-w", "net.ipv6.conf.all.forwarding=1"]).status()?;
 
-//   // Add IPv6 route (ignore error if already exists)
-//   let output = Command::new("ip").args(&["-6", "route", "add", &ipv6_network, "dev", "tun0"]).output()?;
+  // Add routes for VPN subnets through tun0
+  Command::new("ip").args(["route", "add", &format!("{}/{}", shared::BASE_IPV4, shared::BASE_IPV4_MASK), "dev", "tun0"]).status()?;
 
-//   if !output.status.success() {
-//     let stderr = String::from_utf8_lossy(&output.stderr);
-//     if !stderr.contains("File exists") {
-//       return Err(anyhow::anyhow!("Failed to add IPv6 route: {}", stderr));
-//     }
-//     println!("IPv6 route already exists");
-//   } else {
-//     println!("IPv6 route added: {} via tun0", ipv6_network);
-//   }
+  Command::new("ip").args(["-6", "route", "add", &format!("{}/{}", shared::BASE_IPV6, shared::BASE_IPV6_PREFIX), "dev", "tun0"]).status()?;
 
-//   Ok(())
-// }
+  // Enable NAT for VPN traffic (optional, if clients need internet access)
+  Command::new("iptables").args(["-t", "nat", "-A", "POSTROUTING", "-s", &format!("{}/{}", shared::BASE_IPV4, shared::BASE_IPV4_MASK), "-o", "eth0", "-j", "MASQUERADE"]).status()?;
+
+  Command::new("ip6tables").args(["-t", "nat", "-A", "POSTROUTING", "-s", &format!("{}/{}", shared::BASE_IPV6, shared::BASE_IPV6_PREFIX), "-o", "eth0", "-j", "MASQUERADE"]).status()?;
+
+  Ok(())
+}
