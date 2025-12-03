@@ -1,6 +1,7 @@
 use std::net::IpAddr;
 use std::net::SocketAddr;
 
+use shared::UDP_ID_TOTAL_LEN;
 use tokio::net::UdpSocket;
 
 use super::*;
@@ -32,11 +33,20 @@ async fn handle_udp_read(
   }
 
   // min valid datagram
-  if n < 4 {
+  if n < UDP_ID_TOTAL_LEN {
     return Ok(());
   }
 
-  let client_id = shared::UdpId::from([udp_buffer[0], udp_buffer[1], udp_buffer[2], udp_buffer[3]]);
+  // let client_id = shared::UdpId::from([udp_buffer[0], udp_buffer[1], udp_buffer[2], udp_buffer[3]]);
+
+  let Some(client_id) = shared::UdpId::try_from(&udp_buffer[..UDP_ID_TOTAL_LEN]) else {
+    return Ok(());
+  };
+
+  if client_id.validate() == false {
+    return Ok(())
+  }
+
   let is_new_client = udp_state.add_client(&client_id, sockaddr)?;
 
   if is_new_client {
@@ -53,24 +63,24 @@ async fn handle_udp_read(
     udp_socket.send_to(&out_buffer, sockaddr).await.map_err(|err| anyhow::anyhow!("failed to send tun packet: {err:?}"))?;
   }
 
-  if n < 24 {
+  if n < 20 + UDP_ID_TOTAL_LEN {
     return Ok(())
   }
 
-  match udp_buffer[4] >> 4 {
+  match udp_buffer[UDP_ID_TOTAL_LEN] >> 4 {
     4 => {
-      let mut ipv4_packet = smoltcp::wire::Ipv4Packet::new_checked(&mut udp_buffer[4..]).map_err(|err| anyhow::anyhow!("failed to parse ipv4 packet {err:?}"))?;
+      let mut ipv4_packet = smoltcp::wire::Ipv4Packet::new_checked(&mut udp_buffer[UDP_ID_TOTAL_LEN..]).map_err(|err| anyhow::anyhow!("failed to parse ipv4 packet {err:?}"))?;
       ipv4_packet.set_src_addr(*udp_state.get_client_virtual_ipv4(&client_id).unwrap());
       ipv4_packet.fill_checksum();
     }
     6 => {
-      let mut ipv6_packet = smoltcp::wire::Ipv6Packet::new_checked(&mut udp_buffer[4..]).map_err(|err| anyhow::anyhow!("failed to parse ipv6 packet {err:?}"))?;
+      let mut ipv6_packet = smoltcp::wire::Ipv6Packet::new_checked(&mut udp_buffer[UDP_ID_TOTAL_LEN..]).map_err(|err| anyhow::anyhow!("failed to parse ipv6 packet {err:?}"))?;
       ipv6_packet.set_src_addr(*udp_state.get_client_virtual_ipv6(&client_id).unwrap());
     }
     _ => return Ok(())
   }
 
-  tun_device.send(&udp_buffer[4..n + 4]).await.map_err(|err| anyhow::anyhow!("failed to send udp datagram: {err:?}"))?;
+  tun_device.send(&udp_buffer[UDP_ID_TOTAL_LEN..n + UDP_ID_TOTAL_LEN]).await.map_err(|err| anyhow::anyhow!("failed to send udp datagram: {err:?}"))?;
 
   Ok(())
 }

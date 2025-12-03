@@ -6,6 +6,7 @@ mod udp_id;
 pub use config::Config;
 pub use ipv4_pool::*;
 pub use ipv6_pool::*;
+pub use udp_id::UDP_ID_TOTAL_LEN;
 pub use udp_id::UdpId;
 
 pub const MTU: u16 = 1400;

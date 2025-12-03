@@ -1,13 +1,14 @@
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
 
+use shared::UDP_ID_TOTAL_LEN;
 use tokio::net::UdpSocket;
 
 mod route_setup;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-  let config = shared::Config::new()?;
+  let config = shared::Config::new_from_embed()?;
 
   let mut tun_device: Option<tun_rs::AsyncDevice> = None;
 
@@ -17,18 +18,18 @@ async fn main() -> anyhow::Result<()> {
   let udp_id = shared::UdpId::generate();
 
   let mut udp_buffer = [0u8; 4096 + 1]; // 1 byte extra for packet type
+
   let mut tun_buffer = [0u8; 4096];
+  tun_buffer[0..UDP_ID_TOTAL_LEN].copy_from_slice(&udp_id.as_bytes());
 
-  tun_buffer[0..4].copy_from_slice(&udp_id.as_bytes());
-
-  udp_socket.send(udp_id.as_bytes()).await?;
+  udp_socket.send(&udp_id.as_bytes()).await?;
 
   loop {
     tokio::select! {
       udp_read = udp_socket.recv(&mut udp_buffer) => handle_udp_read(udp_read, &mut udp_buffer, &mut tun_device).await?,
       tun_read = async {
         match &mut tun_device {
-          Some(device) => device.recv(&mut tun_buffer[4..]).await,
+          Some(device) => device.recv(&mut tun_buffer[UDP_ID_TOTAL_LEN..]).await,
           None => std::future::pending().await,
         }
       } => handle_tun_read(tun_read, &mut tun_buffer, &udp_socket).await?,
@@ -86,7 +87,7 @@ async fn handle_tun_read(tun_read: tokio::io::Result<usize>, tun_buffer: &mut [u
     return Err(anyhow::anyhow!("failed to recv tun packet: EOF"))
   }
 
-  udp_socket.send(&tun_buffer[..4 + n]).await.map_err(|err| anyhow::anyhow!("failed to send tun packet: {err:?}"))?;
+  udp_socket.send(&tun_buffer[..UDP_ID_TOTAL_LEN + n]).await.map_err(|err| anyhow::anyhow!("failed to send tun packet: {err:?}"))?;
 
   Ok(())
 }
