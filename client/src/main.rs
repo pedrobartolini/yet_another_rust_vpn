@@ -4,7 +4,7 @@ use std::net::Ipv6Addr;
 use shared::UDP_ID_TOTAL_LEN;
 use tokio::net::UdpSocket;
 
-mod route_setup;
+mod setup;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -67,7 +67,7 @@ async fn handle_udp_read(udp_read: tokio::io::Result<usize>, udp_buffer: &mut [u
         .mtu(shared::MTU)
         .build_async()?;
 
-      route_setup::setup_route("tun0")?;
+      setup::setup_route("tun0")?;
 
       println!("assigned tun device");
 
