@@ -6,7 +6,7 @@ mod vpn_state;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-  let config = shared::Config::new()?;
+  let config = shared::Config::new_from_embed()?;
 
   let mut ipv4_pool = shared::IPv4Pool::new(shared::BASE_IPV4, shared::BASE_IPV4_MASK);
   let mut ipv6_pool = shared::IPv6Pool::new(shared::BASE_IPV6, shared::BASE_IPV6_PREFIX);

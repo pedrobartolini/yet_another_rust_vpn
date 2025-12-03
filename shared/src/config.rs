@@ -11,8 +11,8 @@ impl Config {
   }
 
   pub fn new_from_embed() -> anyhow::Result<Self> {
-    let server_addr = include_str!("../../env/server_addr").to_string();
-    let server_port = include_str!("../../env/server_port").parse()?;
+    let server_addr = include_str!("../../env/server_addr").trim().to_string();
+    let server_port = include_str!("../../env/server_port").trim().parse()?;
     Ok(Self { server_addr, server_port })
   }
 }
